@@ -1,4 +1,4 @@
-# 메인 비지니스.
+# 공지사항
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from pydantic import BaseModel
 from typing import List, Optional
@@ -16,7 +16,7 @@ client = AsyncIOMotorClient(os.getenv("MONGODB_URI", "mongodb://localhost:27017/
 db = client["board"]
 
 # Pydantic 모델 정의, 요청 데이터 검증을 위함
-class BusinessPost(BaseModel):
+class NoticePost(BaseModel):
     title: str  # 제목
     content: str  # 최대 3000자 내용
     files: Optional[List[str]] = None  # 파일 경로 리스트
@@ -38,15 +38,12 @@ class CommentInDB(Comment):
     id: Optional[str]
 
 # 타입을 확인하는 부분
-types = ["forum", "assist", "stemtraining", "steducation", "essay"]
+types = ["news", "notice"]  
 # type : 게시글 종류
-#   forum : 한미과기동맹포럼
-#   assist : 기술.인력.정보.판매.협력 알선&지원
-#   stemtraining : STEM전공 대학생 연수프로그램
-#   steducation : 과학기술혁신전략 교육훈련
-#   essay : 한미 기술 동맹 및 한미 과학기술협력 촉진에 관한 소논문
+#   news : 한미과기동맹포럼
+#   notice : 기술.인력.정보.판매.협력 알선&지원
 ################################################################################
-#################################주요사업 게시판#################################
+#################################공지사항 게시판#################################
 #################################Create test O##################################
 #################################Update test ##################################
 #################################Delete test ##################################
@@ -55,7 +52,7 @@ types = ["forum", "assist", "stemtraining", "steducation", "essay"]
 ################################################################################
 
 # 게시물 create
-@router.post("/create/{type}", response_model=BusinessPost, dependencies=[Depends(get_current_username)])
+@router.post("/create/{type}", response_model=NoticePost, dependencies=[Depends(get_current_username)])
 async def create_forum_post(
         type: str,
         title: str = Form(...), 
@@ -68,7 +65,7 @@ async def create_forum_post(
     
     if type not in types:
         raise HTTPException(status_code=400, detail="Invalid type")
-
+    
     post_dict = {"title": title, "content": content, "files": [], "comments": [], "views": 0}
     
     if files:  # 파일이 있는 경우
@@ -84,7 +81,7 @@ async def create_forum_post(
     return post_dict  # 생성된 게시물 반환
 
 # 게시물 update
-@router.put("/update/{type}/{post_id}", response_model=BusinessPost, dependencies=[Depends(get_current_username)])
+@router.put("/update/{type}/{post_id}", response_model=NoticePost, dependencies=[Depends(get_current_username)])
 async def update_forum_post(
         type: str,
         post_id: str,
@@ -96,9 +93,6 @@ async def update_forum_post(
     if username != "superadmin" and username != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    if type not in types:
-        raise HTTPException(status_code=400, detail="Invalid type")
-
     post_dict = {"title": title, "content": content, "files": []}
     
     if files:  # 파일이 있는 경우
@@ -132,9 +126,6 @@ async def delete_forum_post(
     if username != "superadmin" and username != "admin":
         raise HTTPException(status_code=403, detail="Not enough permissions")
     
-    if type not in types:
-        raise HTTPException(status_code=400, detail="Invalid type")
-
     result = await db[type].delete_one({"_id": ObjectId(post_id)})
     
     if result.deleted_count == 0:
@@ -142,7 +133,7 @@ async def delete_forum_post(
     return {"message": "Deleted successfully"}
 
 # 게시물 read
-@router.get("/{type}/{post_id}", response_model=BusinessPost)
+@router.get("/{type}/{post_id}", response_model=NoticePost)
 async def get_forum_post(type: str, post_id: str):
     if type not in types:
         raise HTTPException(status_code=400, detail="Invalid type")
@@ -157,8 +148,21 @@ async def get_forum_post(type: str, post_id: str):
     else:
         raise HTTPException(status_code=404, detail="Post not found")
     
+# FAQ 게시판 제작
+
+
+
+
+
+
+
+
+
+
+
+
 ################################################################################
-#############################주요사업 게시판 댓글기능#############################
+#############################공지사항 게시판 댓글기능#############################
 ################################################################################
 
 # 댓글 추가
