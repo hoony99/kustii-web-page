@@ -29,7 +29,7 @@ class IntroductionPost(BaseModel):
 #   intro : KUSTII소개
 #   organization : 조직도
 
-@router.post("/update/{type}", response_model=IntroductionPost, dependencies=[Depends(get_current_username)])
+@router.post("/{type}/update", response_model=IntroductionPost, dependencies=[Depends(get_current_username)])
 async def update_post(
         type: str, 
         title: str = Form(...), 

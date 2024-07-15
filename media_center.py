@@ -1,4 +1,12 @@
-# 미디어 게시판
+###############################################################################
+#################################미디어 게시판 #################################
+#################################Create test O#################################
+#################################Update test  #################################
+#################################Delete test  #################################
+#################################Read  test   #################################
+#################################Comment test #################################
+################################게시글조회 test O###############################
+###############################################################################
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from pydantic import BaseModel
 from typing import List, Optional
@@ -25,14 +33,6 @@ class MediaPost(BaseModel):
     thumbnail: Optional[str] = None  # 썸네일 이미지 경로
     files: Optional[List[str]] = None  # 파일 경로 리스트
 
-################################################################################
-#################################미디어 게시판##################################
-#################################Create test O##################################
-#################################Update test ##################################
-#################################Delete test ##################################
-#################################Read   test ##################################
-#################################Comment test #################################
-################################################################################
 # URL에서 이미지를 다운로드하여 저장하는 함수
 async def save_image_from_url(url: str, save_path: str):
     response = requests.get(url)
@@ -40,7 +40,7 @@ async def save_image_from_url(url: str, save_path: str):
     image.save(save_path)
 
 # 게시물 create
-@router.post("/create/{type}", response_model=MediaPost, dependencies=[Depends(get_current_username)])
+@router.post("/{type}/create", response_model=MediaPost, dependencies=[Depends(get_current_username)])
 async def create_media_post(
         type: str,
         title: str = Form(...), 
@@ -75,7 +75,7 @@ async def create_media_post(
     return post_dict  # 생성된 게시물 반환
 
 # 게시물 update
-@router.put("/update/{type}/{post_id}", response_model=MediaPost, dependencies=[Depends(get_current_username)])
+@router.put("/{type}/{post_id}/update", response_model=MediaPost, dependencies=[Depends(get_current_username)])
 async def update_media_post(
         type: str,
         post_id: str,
@@ -120,7 +120,7 @@ async def update_media_post(
     return updated_post  # 업데이트된 게시물 반환
 
 # 게시물 delete
-@router.delete("/delete/{type}/{post_id}", response_model=dict, dependencies=[Depends(get_current_username)])
+@router.delete("/{type}/{post_id}/delete", response_model=dict, dependencies=[Depends(get_current_username)])
 async def delete_media_post(
         type: str, 
         post_id: str, 

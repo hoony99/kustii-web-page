@@ -1,6 +1,15 @@
-# 공지사항
+###############################################################################
+#################################공지사항 게시판################################
+#################################Create test O#################################
+#################################Update test O#################################
+#################################Delete test O#################################
+#################################Read  test  O#################################
+#################################Comment test #################################
+################################게시글조회 test O###############################
+###############################################################################
+
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from bson import ObjectId
 import aiofiles
@@ -17,11 +26,21 @@ db = client["board"]
 
 # Pydantic 모델 정의, 요청 데이터 검증을 위함
 class NoticePost(BaseModel):
+    id: Optional[str] = Field(alias="_id")  # MongoDB ObjectId를 문자열로 변환하여 포함
     title: str  # 제목
     content: str  # 최대 3000자 내용
     files: Optional[List[str]] = None  # 파일 경로 리스트
     comments: Optional[List['CommentInDB']] = []
     views: int = 0  # 조회수 필드 추가
+    class Config:
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
+    
+# 게시물 목록과 페이지 정보를 포함하는 응답 모델 정의
+class NoticePostListResponse(BaseModel):
+    posts: List[NoticePost] = Field(..., description="게시물 목록")
+    total_pages: int = Field(..., description="총 페이지 수")
+    current_page: int = Field(..., description="현재 페이지 번호")
 
 class Comment(BaseModel):
     user: str
@@ -42,18 +61,10 @@ types = ["news", "notice"]
 # type : 게시글 종류
 #   news : 한미과기동맹포럼
 #   notice : 기술.인력.정보.판매.협력 알선&지원
-################################################################################
-#################################공지사항 게시판#################################
-#################################Create test O##################################
-#################################Update test ##################################
-#################################Delete test ##################################
-#################################Read   test ##################################
-#################################Comment test #################################
-################################################################################
 
 # 게시물 create
-@router.post("/create/{type}", response_model=NoticePost, dependencies=[Depends(get_current_username)])
-async def create_forum_post(
+@router.post("/{type}/create", response_model=NoticePost, dependencies=[Depends(get_current_username)])
+async def create_notice_post(
         type: str,
         title: str = Form(...), 
         content: str = Form(...), 
@@ -81,13 +92,13 @@ async def create_forum_post(
     return post_dict  # 생성된 게시물 반환
 
 # 게시물 update
-@router.put("/update/{type}/{post_id}", response_model=NoticePost, dependencies=[Depends(get_current_username)])
-async def update_forum_post(
+@router.put("/{type}/{post_id}/update", response_model=NoticePost, dependencies=[Depends(get_current_username)])
+async def update_notice_post(
         type: str,
         post_id: str,
-        title: str = Form(...), 
-        content: str = Form(...), 
-        files: List[UploadFile] = File(None), 
+        title: str = Form(...),
+        content: str = Form(...),
+        files: List[UploadFile] = File(None),
         username: str = Depends(get_user_role)
     ):
     if username != "superadmin" and username != "admin":
@@ -113,14 +124,14 @@ async def update_forum_post(
         raise HTTPException(status_code=404, detail="Post not found")
     
     updated_post = await db[type].find_one({"_id": ObjectId(post_id)})
-    updated_post["_id"] = str(updated_post["_id"])  # ObjectId를 문자열로 변환    
+    updated_post["_id"] = str(updated_post["_id"])  # ObjectId를 문자열로 변환
     return updated_post  # 업데이트된 게시물 반환
 
 # 게시물 delete
-@router.delete("/delete/{type}/{post_id}", response_model=dict, dependencies=[Depends(get_current_username)])
-async def delete_forum_post(
-        type: str, 
-        post_id: str, 
+@router.delete("/{type}/{post_id}/delete", response_model=dict, dependencies=[Depends(get_current_username)])
+async def delete_notice_post(
+        type: str,
+        post_id: str,
         username: str = Depends(get_user_role)
         ):
     if username != "superadmin" and username != "admin":
@@ -129,12 +140,12 @@ async def delete_forum_post(
     result = await db[type].delete_one({"_id": ObjectId(post_id)})
     
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Post not found")    
+        raise HTTPException(status_code=404, detail="Post not found")
     return {"message": "Deleted successfully"}
 
 # 게시물 read
 @router.get("/{type}/{post_id}", response_model=NoticePost)
-async def get_forum_post(type: str, post_id: str):
+async def get_notice_post(type: str, post_id: str):
     if type not in types:
         raise HTTPException(status_code=400, detail="Invalid type")
     
@@ -148,6 +159,31 @@ async def get_forum_post(type: str, post_id: str):
     else:
         raise HTTPException(status_code=404, detail="Post not found")
     
+# 게시물 목록 조회
+@router.get("/{type}", response_model=NoticePostListResponse)
+async def get_notice_posts(type: str, page: int = 1, limit: int = 10):
+    if type not in types:
+        raise HTTPException(status_code=400, detail="Invalid type")
+    
+    skip = (page - 1) * limit
+    posts = await db[type].find().skip(skip).limit(limit).to_list(length=limit)
+    total_posts = await db[type].count_documents({})
+    total_pages = (total_posts + limit - 1) // limit  # 총 페이지 수 계산
+
+    formatted_posts = []
+    for i, post in enumerate(posts, start=1):
+        post["_id"] = str(post["_id"])  # ObjectId를 문자열로 변환
+        post["has_files"] = bool(post.get("files"))  # 파일 존재 여부 추가
+        post["number"] = i + skip  # 글 번호 추가
+        formatted_posts.append(post)
+
+    return {
+        "posts": formatted_posts,
+        "total_pages": total_pages,
+        "current_page": page
+    }
+
+
 # FAQ 게시판 제작
 
 

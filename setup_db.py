@@ -86,6 +86,7 @@ async def setup_db():
         "files": [],
         "comments": [],
         "views": 0
+        
     }
     await db["news"].update_one({}, {"$setOnInsert": news}, upsert=True)
 
